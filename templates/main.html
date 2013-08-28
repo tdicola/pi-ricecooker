@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html class="no-js">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>Rice Cooker Status</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}" media="screen">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+        <script src="{{ url_for('static', filename='js/vendor/modernizr-2.6.2.min.js') }}"></script>
+    </head>
+    <body>
+        <div class="container">
+            <div class="jumbotron">
+                <h1>Rice Cooker</h1>
+                <h2>Status: <span id="status" class="label label-default">Disconnected</span></h2>
+                <button type="button" class="btn btn-lg btn-link" id="settingsBtn">Settings</button>
+            </div>
+            <div class="row" id="settings">
+                <div class="col-md-9">
+                    <h3>Raw Sensor Data</h3>
+                    <div id="chart"></div>
+                    <h4 id="legend" class="pull-right"></h4>
+                </div>
+                <div class="col-md-3">
+                    <h3>Settings</h3>
+                    <form role="form" method="post" action="{{ url_for('updateSettings') }}">
+                        <div class="form-group">
+                            <label for="threshold">Cook/Warm Threshold</label>
+                            <input type="text" class="form-control" id="threshold" name="threshold" value="{{ model.getThreshold() }}"></input>
+                        </div>
+                        <div class="form-group">
+                            <label for="frequency">Update Frequency (seconds)</label>
+                            <input type="text" class="form-control" id="frequency" name="frequency" value="{{ model.getFrequency() }}"></input>
+                        </div>
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-default">Update Settings</button>
+                        </div>
+                        <div class="form-group">
+                            <button id="stop" type="button" class="btn btn-default">Disconnect</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <script src="{{ url_for('static', filename='js/vendor/jquery-1.10.1.min.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/vendor/jquery.flot.min.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/vendor/jquery.flot.time.min.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/vendor/bootstrap.min.js') }}"></script>
+        <script>
+            var maxSeconds = 60; // Show 5 minutes of data
+            var maxSamples = Math.ceil(60 / {{ model.getFrequency() }}) + 1;
+            var samples = [];
+            var source = new EventSource("{{ url_for('streamStatus') }}");
+
+            var plotChart = function(samples) {
+                // Plot the chart
+                var maxTime = Date.now();
+                var minTime = maxTime - (1000*maxSeconds);
+                var threshold = {{ model.getThreshold() }};
+                $.plot($("#chart"), 
+                    [ { label: "Raw Sensor Data",
+                        data: samples }, 
+                      { color: "#d9534f", 
+                        label: "Cook/Warm Threshold", 
+                        data: [[minTime, threshold], [maxTime, threshold]] }
+                    ], 
+                    { xaxis: { 
+                        mode: "time", 
+                        timezone: "browser",
+                        timeformat: "%H:%M:%S",
+                        max: maxTime,
+                        min: minTime,
+                        ticks: 6
+                      },
+                      legend: { 
+                        container: '#legend'
+                      }
+                    }
+                );
+            };
+            
+            source.onmessage = function(event) {
+                var data = $.parseJSON(event.data);
+                // Update status
+                $("#status").removeClass()
+                    .addClass("label label-default " + data.status.toLowerCase())
+                    .text(data.status);
+                // Record new sample
+                samples.push([Date.now(), data.raw]);
+                // If there are more samples than we need to store, remove the excess.
+                if (samples.length > maxSamples) {
+                    samples.shift();
+                }
+                // Update the chart
+                plotChart(samples);
+            };
+
+            var disconnected = function() {
+                // Update status to disconnected
+                $("#status").removeClass()
+                    .addClass("label label-default")
+                    .text("Disconnected");
+            };
+
+            source.onerror = function(e) {
+                disconnected();
+            };
+
+            $("#stop").click(function() { 
+                source.close();
+                disconnected();
+            });
+
+
+            $("#settings").hide();
+            $("#settingsBtn").click(function() {
+                if ($("#settings").css("display") == "none") {
+                    $("#settings").show();
+                    plotChart(samples);
+                }
+                else {
+                    $("#settings").hide();
+                }
+            });
+        </script>
+    </body>
+</html>
