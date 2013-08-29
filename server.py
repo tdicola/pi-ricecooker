@@ -36,7 +36,7 @@ def streamStatus():
 def updateSettings():
 	model.setFrequency(float(request.form['frequency']))
 	model.setThreshold(int(request.form['threshold']))
-	return redirect(url_for('main'))
+	return redirect(url_for('main', _anchor='settings'))
 
 # Start running the flask app
 if __name__ == '__main__':

@@ -48,13 +48,13 @@
         <script src="{{ url_for('static', filename='js/vendor/jquery.flot.time.min.js') }}"></script>
         <script src="{{ url_for('static', filename='js/vendor/bootstrap.min.js') }}"></script>
         <script>
-            var maxSeconds = 60; // Show 5 minutes of data
-            var maxSamples = Math.ceil(60 / {{ model.getFrequency() }}) + 1;
+            var maxSeconds = 60; // Show 1 minute of data in the chart
+            var maxSamples = Math.ceil(60 / {{ model.getFrequency() }}) + 1; // Keep enough samples in memory to fill the chart.
             var samples = [];
             var source = new EventSource("{{ url_for('streamStatus') }}");
 
+            // Function to plot the raw data chart
             var plotChart = function(samples) {
-                // Plot the chart
                 var maxTime = Date.now();
                 var minTime = maxTime - (1000*maxSeconds);
                 var threshold = {{ model.getThreshold() }};
@@ -79,7 +79,15 @@
                     }
                 );
             };
+
+            // Function to update status text to disconnected.
+            var disconnected = function() {
+                $("#status").removeClass()
+                    .addClass("label label-default")
+                    .text("Disconnected");
+            };
             
+            // Setup a server sent event stream to update the status and raw data samples.
             source.onmessage = function(event) {
                 var data = $.parseJSON(event.data);
                 // Update status
@@ -96,31 +104,32 @@
                 plotChart(samples);
             };
 
-            var disconnected = function() {
-                // Update status to disconnected
-                $("#status").removeClass()
-                    .addClass("label label-default")
-                    .text("Disconnected");
-            };
-
+            // Update to disconnected state if any errors reading the server sent event stream.
             source.onerror = function(e) {
                 disconnected();
             };
 
+            // Manually disconnect if the stop button is clicked.
             $("#stop").click(function() { 
                 source.close();
                 disconnected();
             });
 
-
-            $("#settings").hide();
+            // Hide settings unless a settings anchor is present in the URL (to preserve settings display on redirect).
+            if (window.location.hash !== "#settings") {
+                $("#settings").hide();
+            }
+            // Setup the settings button to toggle the display state of settings.
             $("#settingsBtn").click(function() {
-                if ($("#settings").css("display") == "none") {
+                if ($("#settings").css("display") === "none") {
+                    // Display the settings.
                     $("#settings").show();
                     plotChart(samples);
                 }
                 else {
+                    // Hide the settings and remove the settings anchor so refreshes won't open the settings.
                     $("#settings").hide();
+                    window.location.hash = "";
                 }
             });
         </script>
