@@ -1,8 +1,6 @@
 # TODO:
-# Tests (pull out GPIO access into a class I can easily test and get rid of the test model)
 # P2 Take X readings and average them to prevent issues (can repro if update time is 0.1)
 # Validate form data
-# Make names consistent (push frequency, frequency)
 
 from flask import *
 import json
