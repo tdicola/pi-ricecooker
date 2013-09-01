@@ -1,6 +1,12 @@
 # Raspberry Pi Rice Cooker
 Raspberry Pi-based web application to monitor the state of a rice cooker.
 
+<a href="http://imgur.com/m80danV"><img src="http://i.imgur.com/m80danVl.jpg"/></a><br/>
+A photo of the rice cooker connected to the Raspberry Pi.
+
+<a href="http://imgur.com/h9EjXbv"><img src="http://i.imgur.com/h9EjXbvl.png"/></a><br/>
+The interface to the rice cooker is a simple web application hosted directly on the Raspberry Pi.
+
 Created by Tony DiCola (tony@tonydicola.com)
 
 ## Requirements
